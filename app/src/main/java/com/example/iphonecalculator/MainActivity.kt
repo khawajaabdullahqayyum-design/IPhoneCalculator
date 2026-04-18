@@ -1,7 +1,7 @@
 package com.example.iphonecalculator
 
 import android.os.Bundle
-import android.view.View
+import android.view.WindowManager
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -23,13 +23,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Full screen immersive
-        @Suppress("DEPRECATION")
-        window.decorView.systemUiVisibility = (
-            View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-            or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-            or View.SYSTEM_UI_FLAG_FULLSCREEN
-        )
+        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+        window.statusBarColor = android.graphics.Color.BLACK
+        window.navigationBarColor = android.graphics.Color.BLACK
         setContentView(R.layout.activity_main)
 
         tvResult = findViewById(R.id.tvResult)
@@ -63,24 +59,17 @@ class MainActivity : AppCompatActivity() {
             justEvaluated = false
             isNewInput = false
         }
-
         if (isNewInput) {
             currentInput = StringBuilder("0")
             isNewInput = false
         }
-
         if (digit == ".") {
-            if (!currentInput.contains(".")) {
-                currentInput.append(".")
-            }
+            if (!currentInput.contains(".")) currentInput.append(".")
         } else if (currentInput.toString() == "0") {
             currentInput = StringBuilder(digit)
         } else {
-            if (currentInput.length < 9) {
-                currentInput.append(digit)
-            }
+            if (currentInput.length < 9) currentInput.append(digit)
         }
-
         updateDisplay(currentInput.toString())
         updateAcButton()
     }
@@ -94,12 +83,10 @@ class MainActivity : AppCompatActivity() {
         } else {
             firstOperand = currentInput.toString().toDouble()
         }
-
         pendingOperator = op
         lastOperator = op
         isNewInput = true
         justEvaluated = false
-
         highlightOperator(op)
     }
 
@@ -112,24 +99,19 @@ class MainActivity : AppCompatActivity() {
             }
             return
         }
-
         if (firstOperand == null || pendingOperator == null) {
             justEvaluated = true
             return
         }
-
         lastOperand = currentInput.toString().toDouble()
         lastOperator = pendingOperator
-
         val result = calculate(firstOperand!!, lastOperand!!, pendingOperator!!)
         updateDisplay(formatResult(result))
         currentInput = StringBuilder(formatResult(result))
-
         firstOperand = null
         pendingOperator = null
         isNewInput = false
         justEvaluated = true
-
         clearOperatorHighlight()
     }
 
@@ -163,8 +145,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun onToggleSign() {
         val value = currentInput.toString().toDoubleOrNull() ?: return
-        val toggled = value * -1
-        currentInput = StringBuilder(formatResult(toggled))
+        currentInput = StringBuilder(formatResult(value * -1))
         updateDisplay(currentInput.toString())
     }
 
@@ -181,35 +162,30 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun formatResult(value: Double): String {
-        if (value.isNaN()) return "Error"
-        if (value.isInfinite()) return "Error"
-
-        return if (value == Math.floor(value) && !value.isInfinite() && Math.abs(value) < 1_000_000_000.0) {
-            val longVal = value.toLong()
-            longVal.toString()
+        if (value.isNaN() || value.isInfinite()) return "Error"
+        return if (value == Math.floor(value) && Math.abs(value) < 1_000_000_000.0) {
+            value.toLong().toString()
         } else {
             val rounded = BigDecimal(value).round(MathContext(9, RoundingMode.HALF_UP))
             val result = rounded.stripTrailingZeros().toPlainString()
-            if (result.length > 9) {
-                BigDecimal(value).round(MathContext(6, RoundingMode.HALF_UP))
-                    .stripTrailingZeros().toPlainString()
-            } else result
+            if (result.length > 9)
+                BigDecimal(value).round(MathContext(6, RoundingMode.HALF_UP)).stripTrailingZeros().toPlainString()
+            else result
         }
     }
 
     private fun updateDisplay(text: String) {
         tvResult.text = text
-        val length = text.length
         tvResult.textSize = when {
-            length <= 6 -> 80f
-            length <= 9 -> 60f
-            else -> 40f
+            text.length <= 6 -> 72f
+            text.length <= 9 -> 54f
+            else -> 38f
         }
     }
 
     private fun updateAcButton() {
-        val btn = findViewById<Button>(R.id.btnAC)
-        btn.text = if (currentInput.toString() == "0" || justEvaluated) "AC" else "C"
+        findViewById<Button>(R.id.btnAC).text =
+            if (currentInput.toString() == "0" || justEvaluated) "AC" else "C"
     }
 
     private fun highlightOperator(op: String) {
